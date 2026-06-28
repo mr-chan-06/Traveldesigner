@@ -5,7 +5,8 @@ let isConnected = false;
 const connectDB = async () => {
   if (process.env.NODE_ENV === 'test') return;
   try {
-    const conn = await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/ooty_travels');
+    const mongoUri = process.env.MONGODB_URI || process.env.MONGO_URI || 'mongodb://localhost:27017/ooty_travels';
+    const conn = await mongoose.connect(mongoUri);
     console.log(`MongoDB Connected: ${conn.connection.host}`);
     isConnected = true;
     
