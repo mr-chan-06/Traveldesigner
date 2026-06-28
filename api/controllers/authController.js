@@ -80,7 +80,7 @@ const register = async (req, res) => {
       return res.status(400).json({ success: false, message: 'User already exists' });
     }
 
-    const newUser = await dataService.users.create({
+    const payload = {
       name,
       email,
       password,
@@ -89,17 +89,14 @@ const register = async (req, res) => {
       licenseNumber,
       vehicleAssigned,
       status: 'Available'
-    });
+    };
+
+    const newUser = await dataService.users.create(payload);
 
     res.status(201).json({
       success: true,
-      message: `${role || 'Driver'} created successfully`,
-      user: {
-        id: newUser._id,
-        name: newUser.name,
-        email: newUser.email,
-        role: newUser.role
-      }
+      message: `${payload.role} created successfully`,
+      data: newUser
     });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });

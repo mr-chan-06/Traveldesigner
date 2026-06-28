@@ -308,14 +308,23 @@ export default function AdminDashboard() {
     try {
       const token = localStorage.getItem('ooty_token');
       const config = { headers: { Authorization: `Bearer ${token}` } };
+      const payload = {
+        ...newDriver,
+        role: 'Driver',
+        status: 'Available'
+      };
 
-      await axios.post('/api/auth/register', newDriver, config);
+      const response = await axios.post('/api/auth/register', payload, config);
+      const driver = response.data?.data;
+      if (driver) {
+        setDrivers([...drivers, driver]);
+      }
+
       setShowDriverModal(false);
       setNewDriver({ name: '', email: '', password: 'driver123', phone: '', licenseNumber: '', vehicleAssigned: '' });
       fetchAllData();
     } catch (error) {
       console.error('Error registering driver', error);
-      // Mock create local state
       setDrivers([...drivers, { _id: 'mock_d_' + Date.now(), ...newDriver, role: 'Driver', status: 'Available' }]);
       setShowDriverModal(false);
     }
