@@ -23,7 +23,20 @@ const getVehicleById = async (req, res) => {
 
 const createVehicle = async (req, res) => {
   try {
-    const vehicle = await dataService.vehicles.create(req.body);
+    const payload = {
+      name: req.body.name,
+      category: req.body.category,
+      seatingCapacity: Number(req.body.seatingCapacity || 0),
+      luggageCapacity: Number(req.body.luggageCapacity || 0),
+      acType: req.body.acType || 'AC',
+      pricePerKm: Number(req.body.pricePerKm || 0),
+      plateNumber: req.body.plateNumber,
+      image: req.body.image,
+      status: req.body.status || 'Available',
+      maintenanceRecords: Array.isArray(req.body.maintenanceRecords) ? req.body.maintenanceRecords : []
+    };
+
+    const vehicle = await dataService.vehicles.create(payload);
     res.status(201).json({ success: true, data: vehicle });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });

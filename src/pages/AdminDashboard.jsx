@@ -326,8 +326,20 @@ export default function AdminDashboard() {
     try {
       const token = localStorage.getItem('ooty_token');
       const config = { headers: { Authorization: `Bearer ${token}` } };
+      const payload = {
+        ...newVehicle,
+        seatingCapacity: Number(newVehicle.seatingCapacity),
+        luggageCapacity: Number(newVehicle.luggageCapacity),
+        pricePerKm: Number(newVehicle.pricePerKm),
+        status: 'Available',
+        maintenanceRecords: []
+      };
 
-      await axios.post('/api/vehicles', newVehicle, config);
+      const response = await axios.post('/api/vehicles', payload, config);
+      const created = response.data?.data;
+      if (created) {
+        setVehicles([...vehicles, created]);
+      }
       setShowVehicleModal(false);
       setNewVehicle({ name: '', category: 'Sedan', seatingCapacity: 4, luggageCapacity: 2, pricePerKm: 14, plateNumber: '', acType: 'AC', image: '' });
       fetchAllData();
