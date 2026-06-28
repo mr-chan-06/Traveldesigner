@@ -23,7 +23,28 @@ const getPackageById = async (req, res) => {
 
 const createPackage = async (req, res) => {
   try {
-    const tourPackage = await dataService.packages.create(req.body);
+    const payload = {
+      name: req.body.name,
+      category: req.body.category,
+      duration: req.body.duration,
+      placesCovered: Array.isArray(req.body.placesCovered)
+        ? req.body.placesCovered
+        : typeof req.body.placesCovered === 'string'
+          ? req.body.placesCovered.split(',').map((item) => item.trim()).filter(Boolean)
+          : [],
+      vehicleCategory: req.body.vehicleCategory,
+      accommodation: req.body.accommodation === true || req.body.accommodation === 'true',
+      price: Number(req.body.price || 0),
+      description: req.body.description,
+      highlights: Array.isArray(req.body.highlights)
+        ? req.body.highlights
+        : typeof req.body.highlights === 'string'
+          ? req.body.highlights.split(',').map((item) => item.trim()).filter(Boolean)
+          : [],
+      image: req.body.image
+    };
+
+    const tourPackage = await dataService.packages.create(payload);
     res.status(201).json({ success: true, data: tourPackage });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -32,7 +53,28 @@ const createPackage = async (req, res) => {
 
 const updatePackage = async (req, res) => {
   try {
-    const tourPackage = await dataService.packages.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    const payload = {
+      name: req.body.name,
+      category: req.body.category,
+      duration: req.body.duration,
+      placesCovered: Array.isArray(req.body.placesCovered)
+        ? req.body.placesCovered
+        : typeof req.body.placesCovered === 'string'
+          ? req.body.placesCovered.split(',').map((item) => item.trim()).filter(Boolean)
+          : [],
+      vehicleCategory: req.body.vehicleCategory,
+      accommodation: req.body.accommodation === true || req.body.accommodation === 'true',
+      price: Number(req.body.price || 0),
+      description: req.body.description,
+      highlights: Array.isArray(req.body.highlights)
+        ? req.body.highlights
+        : typeof req.body.highlights === 'string'
+          ? req.body.highlights.split(',').map((item) => item.trim()).filter(Boolean)
+          : [],
+      image: req.body.image
+    };
+
+    const tourPackage = await dataService.packages.findByIdAndUpdate(req.params.id, payload, { new: true });
     res.status(200).json({ success: true, data: tourPackage });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
