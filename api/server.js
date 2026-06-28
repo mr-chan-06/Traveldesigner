@@ -1,7 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
-const { connectDB } = require('./config/db');
+const { connectDB, getIsConnected } = require('./config/db');
 
 // Load environment variables from root .env
 dotenv.config({ path: require('path').resolve(__dirname, '../.env') });
@@ -16,7 +16,8 @@ app.use(cors({
   origin: '*', // For development, allow all origins
   credentials: true
 }));
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ limit: '10mb', extended: true }));
 
 // Main Root route
 app.get('/', (req, res) => {
@@ -24,6 +25,14 @@ app.get('/', (req, res) => {
     success: true,
     message: 'Welcome to Ooty Travels Designer API Gateway',
     timestamp: new Date()
+  });
+});
+
+// Database connection status route
+app.get('/api/db-status', (req, res) => {
+  res.status(200).json({
+    success: true,
+    isConnected: getIsConnected()
   });
 });
 
@@ -61,3 +70,5 @@ if (process.env.NODE_ENV !== 'production') {
     console.log(`Server running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`);
   });
 }
+// Trigger reload
+

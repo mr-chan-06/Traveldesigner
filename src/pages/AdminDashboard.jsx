@@ -40,6 +40,8 @@ export default function AdminDashboard() {
   const [vehicles, setVehicles] = useState([]);
   const [enquiries, setEnquiries] = useState([]);
   const [destinations, setDestinations] = useState([]);
+  const [packages, setPackages] = useState([]);
+  const [dbConnected, setDbConnected] = useState(false);
   const [loading, setLoading] = useState(true);
 
   // Form popups visibility states
@@ -48,12 +50,13 @@ export default function AdminDashboard() {
   const [showBookingModal, setShowBookingModal] = useState(false);
   const [showLeadModal, setShowLeadModal] = useState(false);
   const [showDestModal, setShowDestModal] = useState(false);
+  const [showPackageModal, setShowPackageModal] = useState(false);
   const [assignModal, setAssignModal] = useState({ open: false, bookingId: null });
 
   // Fields for Add Driver
   const [newDriver, setNewDriver] = useState({ name: '', email: '', password: 'driver123', phone: '', licenseNumber: '', vehicleAssigned: '' });
   // Fields for Add Vehicle
-  const [newVehicle, setNewVehicle] = useState({ name: '', category: 'Sedan', seatingCapacity: 4, luggageCapacity: 2, pricePerKm: 14, plateNumber: '', acType: 'AC' });
+  const [newVehicle, setNewVehicle] = useState({ name: '', category: 'Sedan', seatingCapacity: 4, luggageCapacity: 2, pricePerKm: 14, plateNumber: '', acType: 'AC', image: '' });
   // Fields for Add Booking
   const [newBooking, setNewBooking] = useState({
     customerName: '',
@@ -84,6 +87,19 @@ export default function AdminDashboard() {
     estimatedFare: '',
     popularSpots: ''
   });
+  // Fields for Add Package
+  const [newPackage, setNewPackage] = useState({
+    name: '',
+    category: 'Ooty Package',
+    duration: '3 Days / 2 Nights',
+    placesCovered: '',
+    vehicleCategory: 'Sedan',
+    accommodation: true,
+    price: '',
+    description: '',
+    highlights: '',
+    image: ''
+  });
   // Driver assignment selection
   const [selectedDriver, setSelectedDriver] = useState('');
 
@@ -94,6 +110,13 @@ export default function AdminDashboard() {
     }
   }, [isAuthenticated, user, navigate]);
 
+  const fallbackPkgs = [
+    { _id: 'p1', name: 'Ooty Hills Escape Tour', category: 'Ooty Package', duration: '3 Days / 2 Nights', placesCovered: ['Ooty Lake', 'Botanical Gardens', 'Doddabetta Peak', 'Coonoor SIMS Park', 'Pykara Waterfalls'], vehicleCategory: 'Sedan', accommodation: true, price: 8999, highlights: ['Toy Train ride booking support', 'Local tea garden walks', 'Private cab for sightseeing'], image: 'https://images.unsplash.com/photo-1590050752117-238cb0612b1b?auto=format&fit=crop&q=80&w=600' },
+    { _id: 'p2', name: 'Misty Munnar Tea Trail', category: 'Kerala Package', duration: '4 Days / 3 Nights', placesCovered: ['Munnar tea gardens', 'Eravikulam National Park', 'Mattupetty Dam', 'Alleppey Backwaters'], vehicleCategory: 'SUV', accommodation: true, price: 15499, highlights: ['Spice plantation visits', 'Alleppey day boat cruise', 'Dedicated driver for entire tour'], image: 'https://images.unsplash.com/photo-1593693397690-362cb9666fc2?auto=format&fit=crop&q=80&w=600' },
+    { _id: 'p3', name: 'Royal Mysore & Coorg Coffee Trail', category: 'Karnataka Package', duration: '5 Days / 4 Nights', placesCovered: ['Mysore Palace', 'Chamundi Hills', 'Coorg Abbey Falls', 'Raja Seat', 'Bylakuppe Golden Temple'], vehicleCategory: 'Innova Crysta', accommodation: true, price: 21999, highlights: ['Mysore Palace lighting tour', 'Elephant camp interactions', 'Premium Innova Crysta booking'], image: 'https://images.unsplash.com/photo-1590766940554-634a7ed41450?auto=format&fit=crop&q=80&w=600' },
+    { _id: 'p4', name: 'Grand South India Heritage Tour', category: 'South India Package', duration: '8 Days / 7 Nights', placesCovered: ['Ooty Hills', 'Kodaikanal Lake', 'Madurai Temple', 'Rameswaram Bridge', 'Kanyakumari Sunset Point'], vehicleCategory: 'Tempo Traveller', accommodation: true, price: 34999, highlights: ['Multi-state travel permission included', 'Covering major cultural monuments', 'Group Tempo Traveller transportation'], image: 'https://images.unsplash.com/photo-1548013146-72479768bada?auto=format&fit=crop&q=80&w=600' }
+  ];
+
   // Fetch admin dashboard lists
   const fetchAllData = async () => {
     setLoading(true);
@@ -101,12 +124,14 @@ export default function AdminDashboard() {
       const token = localStorage.getItem('ooty_token');
       const config = { headers: { Authorization: `Bearer ${token}` } };
       
-      const [bookRes, driverRes, vehicleRes, enqRes, destRes] = await Promise.all([
+      const [bookRes, driverRes, vehicleRes, enqRes, destRes, pkgRes, dbRes] = await Promise.all([
         axios.get('/api/bookings', config).catch(() => ({ data: { data: [] } })),
         axios.get('/api/auth/drivers', config).catch(() => ({ data: { data: [] } })),
         axios.get('/api/vehicles').catch(() => ({ data: { data: [] } })),
         axios.get('/api/enquiries', config).catch(() => ({ data: { data: [] } })),
-        axios.get('/api/destinations').catch(() => ({ data: { data: [] } }))
+        axios.get('/api/destinations').catch(() => ({ data: { data: [] } })),
+        axios.get('/api/packages').catch(() => ({ data: { data: [] } })),
+        axios.get('/api/db-status').catch(() => ({ data: { isConnected: false } }))
       ]);
 
       setBookings(bookRes.data.data || []);
@@ -114,9 +139,12 @@ export default function AdminDashboard() {
       setVehicles(vehicleRes.data.data || []);
       setEnquiries(enqRes.data.data || []);
       setDestinations(destRes.data.data || []);
+      setPackages(pkgRes.data.data && pkgRes.data.data.length > 0 ? pkgRes.data.data : fallbackPkgs);
+      setDbConnected(dbRes.data.isConnected || false);
 
     } catch (error) {
       console.error('Error fetching admin data, loading client placeholders', error);
+      setPackages(fallbackPkgs);
     } finally {
       setLoading(false);
     }
@@ -252,7 +280,7 @@ export default function AdminDashboard() {
 
       await axios.post('/api/vehicles', newVehicle, config);
       setShowVehicleModal(false);
-      setNewVehicle({ name: '', category: 'Sedan', seatingCapacity: 4, luggageCapacity: 2, pricePerKm: 14, plateNumber: '', acType: 'AC' });
+      setNewVehicle({ name: '', category: 'Sedan', seatingCapacity: 4, luggageCapacity: 2, pricePerKm: 14, plateNumber: '', acType: 'AC', image: '' });
       fetchAllData();
     } catch (error) {
       console.error('Error adding vehicle', error);
@@ -406,6 +434,72 @@ export default function AdminDashboard() {
     }
   };
 
+  const handleAddPackage = async (e) => {
+    e.preventDefault();
+    try {
+      const token = localStorage.getItem('ooty_token');
+      const config = { headers: { Authorization: `Bearer ${token}` } };
+
+      const payload = {
+        name: newPackage.name,
+        category: newPackage.category,
+        duration: newPackage.duration,
+        placesCovered: newPackage.placesCovered ? newPackage.placesCovered.split(',').map(s => s.trim()) : [],
+        vehicleCategory: newPackage.vehicleCategory,
+        accommodation: newPackage.accommodation,
+        price: Number(newPackage.price || 0),
+        description: newPackage.description,
+        highlights: newPackage.highlights ? newPackage.highlights.split(',').map(s => s.trim()) : [],
+        image: newPackage.image || 'https://images.unsplash.com/photo-1590050752117-238cb0612b1b?auto=format&fit=crop&q=80&w=600'
+      };
+
+      await axios.post('/api/packages', payload, config);
+      setShowPackageModal(false);
+      setNewPackage({
+        name: '',
+        category: 'Ooty Package',
+        duration: '3 Days / 2 Nights',
+        placesCovered: '',
+        vehicleCategory: 'Sedan',
+        accommodation: true,
+        price: '',
+        description: '',
+        highlights: '',
+        image: ''
+      });
+      fetchAllData();
+    } catch (error) {
+      console.error('Error adding package', error);
+      setPackages([...packages, {
+        _id: 'mock_pkg_' + Date.now(),
+        name: newPackage.name,
+        category: newPackage.category,
+        duration: newPackage.duration,
+        placesCovered: newPackage.placesCovered ? newPackage.placesCovered.split(',').map(s => s.trim()) : [],
+        vehicleCategory: newPackage.vehicleCategory,
+        accommodation: newPackage.accommodation,
+        price: Number(newPackage.price || 0),
+        description: newPackage.description,
+        highlights: newPackage.highlights ? newPackage.highlights.split(',').map(s => s.trim()) : [],
+        image: newPackage.image || 'https://images.unsplash.com/photo-1590050752117-238cb0612b1b?auto=format&fit=crop&q=80&w=600'
+      }]);
+      setShowPackageModal(false);
+    }
+  };
+
+  const handleDeletePackage = async (id) => {
+    if (!window.confirm('Are you sure you want to delete this package?')) return;
+    try {
+      const token = localStorage.getItem('ooty_token');
+      const config = { headers: { Authorization: `Bearer ${token}` } };
+      await axios.delete(`/api/packages/${id}`, config);
+      fetchAllData();
+    } catch (error) {
+      console.error('Error deleting package', error);
+      setPackages(packages.filter(p => p._id !== id));
+    }
+  };
+
   const handleInvoiceDownload = (bookingId) => {
     window.open(`/api/bookings/${bookingId}/invoice`, '_blank');
   };
@@ -455,7 +549,20 @@ export default function AdminDashboard() {
         <div>
           <span className="text-emeraldGreen text-xs font-bold uppercase tracking-widest">Ooty HQ Operations Control</span>
           <h1 className="font-display font-extrabold text-3xl mt-1">Hello, {user.name}</h1>
-          <p className="text-slate-400 text-xs mt-1">Role Permission: {user.role} | Server: Local Fallback Resilient Mode</p>
+          <p className="text-slate-400 text-xs mt-1 flex flex-wrap items-center gap-2">
+            <span>Role Permission: {user.role}</span>
+            <span className="text-slate-600 hidden sm:inline">|</span>
+            <span className="flex items-center gap-1.5">
+              <span className={`w-2.5 h-2.5 rounded-full ${dbConnected ? 'bg-emerald-500' : 'bg-amber-500 animate-pulse'}`}></span>
+              <span>
+                Database Connection: {dbConnected ? (
+                  <span className="text-emerald-400 font-semibold">Connected (MongoDB)</span>
+                ) : (
+                  <span className="text-amber-400 font-semibold">Fallback Memory Mode (Resilient)</span>
+                )}
+              </span>
+            </span>
+          </p>
         </div>
         <div className="flex space-x-3">
           <button 
@@ -478,7 +585,7 @@ export default function AdminDashboard() {
       {/* Tabs list bar */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-10">
         <div className="flex border-b border-slate-200 dark:border-slate-800 pb-2 overflow-x-auto space-x-6">
-          {['Overview', 'Bookings', 'Drivers', 'Vehicles', 'Destinations', 'Leads'].map((tab) => (
+          {['Overview', 'Bookings', 'Drivers', 'Vehicles', 'Destinations', 'Packages', 'Leads'].map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
@@ -888,6 +995,61 @@ export default function AdminDashboard() {
               </div>
             )}
 
+            {/* VIEW 7: PACKAGES */}
+            {activeTab === 'Packages' && (
+              <div className="space-y-6">
+                <div className="flex justify-between items-center bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm">
+                  <h3 className="font-bold text-slate-850 dark:text-slate-100 text-lg">Tour Packages Options</h3>
+                  <button 
+                    onClick={() => setShowPackageModal(true)}
+                    className="px-3 py-1.5 bg-emeraldGreen text-white font-bold rounded-lg hover:bg-emerald-600 text-xs flex items-center space-x-1.5 shadow"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span>Add Package</span>
+                  </button>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {packages.map((pkg) => (
+                    <div key={pkg._id} className="bg-white dark:bg-slate-800 rounded-2xl overflow-hidden border border-slate-100 dark:border-slate-700 shadow-sm flex flex-col justify-between relative transition-all duration-200">
+                      <div>
+                        <div className="relative">
+                          <img src={pkg.image || 'https://images.unsplash.com/photo-1590050752117-238cb0612b1b?auto=format&fit=crop&q=80&w=400'} alt={pkg.name} className="h-40 w-full object-cover" />
+                          <button
+                            onClick={() => handleDeletePackage(pkg._id)}
+                            className="absolute top-2 right-2 p-1.5 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm rounded-full text-slate-600 dark:text-slate-300 hover:text-red-500 transition-colors shadow-sm"
+                            title="Delete Package"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                        <div className="p-5 space-y-3">
+                          <div className="flex justify-between items-center">
+                            <h4 className="font-bold text-slate-900 dark:text-white text-base">{pkg.name}</h4>
+                            <span className="text-[10px] bg-slate-100 dark:bg-slate-700 px-2 py-0.5 rounded font-bold">{pkg.category}</span>
+                          </div>
+                          <p className="text-xs text-slate-550 dark:text-slate-400 leading-relaxed line-clamp-3">
+                            {pkg.description}
+                          </p>
+                          <div className="text-xs text-slate-550 dark:text-slate-450 pt-1 border-t border-slate-100 dark:border-slate-700 mt-2 space-y-1">
+                            <p><strong>Duration:</strong> {pkg.duration}</p>
+                            <p><strong>Vehicle Category:</strong> {pkg.vehicleCategory}</p>
+                            <p><strong>Accommodation:</strong> {pkg.accommodation ? 'Included' : 'Not Included'}</p>
+                            <p><strong>Price:</strong> <span className="font-bold text-emeraldGreen text-sm">Rs. {pkg.price}</span></p>
+                            {pkg.placesCovered && pkg.placesCovered.length > 0 && (
+                              <p className="truncate"><strong>Places:</strong> {pkg.placesCovered.join(', ')}</p>
+                            )}
+                            {pkg.highlights && pkg.highlights.length > 0 && (
+                              <p className="truncate"><strong>Highlights:</strong> {pkg.highlights.join(', ')}</p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
           </div>
         )}
       </div>
@@ -1013,6 +1175,46 @@ export default function AdminDashboard() {
                 className="form-input text-xs" 
                 required
               />
+
+              {/* Cab Photo Upload */}
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-slate-500 dark:text-slate-400">Cab Photo</label>
+                <div className="flex flex-col space-y-2 mt-1">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => {
+                      const file = e.target.files[0];
+                      if (file) {
+                        const reader = new FileReader();
+                        reader.onloadend = () => {
+                          setNewVehicle({ ...newVehicle, image: reader.result });
+                        };
+                        reader.readAsDataURL(file);
+                      }
+                    }}
+                    className="block w-full text-xs text-slate-500
+                      file:mr-4 file:py-2 file:px-4
+                      file:rounded-full file:border-0
+                      file:text-xs file:font-semibold
+                      file:bg-emeraldGreen/10 file:text-emeraldGreen
+                      hover:file:bg-emeraldGreen/20 cursor-pointer"
+                  />
+                  {newVehicle.image && (
+                    <div className="relative mt-2 h-28 w-full rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700">
+                      <img src={newVehicle.image} alt="Cab Preview" className="w-full h-full object-cover" />
+                      <button
+                        type="button"
+                        onClick={() => setNewVehicle({ ...newVehicle, image: '' })}
+                        className="absolute top-1.5 right-1.5 p-1.5 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors shadow-sm"
+                        title="Remove Photo"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
 
               <div className="flex space-x-3 pt-2">
                 <button type="button" onClick={() => setShowVehicleModal(false)} className="w-1/2 btn-secondary py-2 text-xs">Cancel</button>
@@ -1294,14 +1496,42 @@ export default function AdminDashboard() {
                 </select>
               </div>
               <div className="space-y-1">
-                <label className="text-xs font-bold text-slate-500 dark:text-slate-400">Image URL</label>
-                <input 
-                  type="text" 
-                  placeholder="https://images.unsplash.com/... or blank" 
-                  value={newDest.image}
-                  onChange={(e) => setNewDest({ ...newDest, image: e.target.value })}
-                  className="form-input text-xs" 
-                />
+                <label className="text-xs font-bold text-slate-500 dark:text-slate-400">Destination Photo</label>
+                <div className="flex flex-col space-y-2 mt-1">
+                  <input 
+                    type="file" 
+                    accept="image/*"
+                    onChange={(e) => {
+                      const file = e.target.files[0];
+                      if (file) {
+                        const reader = new FileReader();
+                        reader.onloadend = () => {
+                          setNewDest({ ...newDest, image: reader.result });
+                        };
+                        reader.readAsDataURL(file);
+                      }
+                    }}
+                    className="block w-full text-xs text-slate-500
+                      file:mr-4 file:py-2 file:px-4
+                      file:rounded-full file:border-0
+                      file:text-xs file:font-semibold
+                      file:bg-emeraldGreen/10 file:text-emeraldGreen
+                      hover:file:bg-emeraldGreen/20 cursor-pointer"
+                  />
+                  {newDest.image && (
+                    <div className="relative mt-2 h-28 w-full rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700">
+                      <img src={newDest.image} alt="Preview" className="w-full h-full object-cover" />
+                      <button
+                        type="button"
+                        onClick={() => setNewDest({ ...newDest, image: '' })}
+                        className="absolute top-1.5 right-1.5 p-1.5 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors shadow-sm"
+                        title="Remove Photo"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
@@ -1349,6 +1579,172 @@ export default function AdminDashboard() {
               <div className="flex space-x-3 pt-2">
                 <button type="button" onClick={() => setShowDestModal(false)} className="w-1/2 btn-secondary py-2 text-xs">Cancel</button>
                 <button type="submit" className="w-1/2 btn-primary py-2 text-xs">Save Destination</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* --- ADD PACKAGE POPUP MODAL --- */}
+      {showPackageModal && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 sm:p-8 w-full max-w-md shadow-2xl border border-slate-200 dark:border-slate-700 space-y-4 max-h-[90vh] overflow-y-auto">
+            <h3 className="font-display font-extrabold text-2xl text-slate-900 dark:text-white border-l-4 border-emeraldGreen pl-3">
+              Add New Tour Package
+            </h3>
+            <form onSubmit={handleAddPackage} className="space-y-3.5">
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-slate-500 dark:text-slate-400">Package Name</label>
+                <input 
+                  type="text" 
+                  placeholder="e.g. Ooty Weekend Special" 
+                  value={newPackage.name}
+                  onChange={(e) => setNewPackage({ ...newPackage, name: e.target.value })}
+                  className="form-input text-xs" 
+                  required
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-slate-500 dark:text-slate-400">Package Category</label>
+                <select 
+                  value={newPackage.category}
+                  onChange={(e) => setNewPackage({ ...newPackage, category: e.target.value })}
+                  className="form-input text-xs"
+                >
+                  <option value="Ooty Package">Ooty Package</option>
+                  <option value="Kerala Package">Kerala Package</option>
+                  <option value="Karnataka Package">Karnataka Package</option>
+                  <option value="South India Package">South India Package</option>
+                  <option value="Customized Tour Package">Customized Tour Package</option>
+                </select>
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-slate-500 dark:text-slate-400">Duration (e.g. 3 Days / 2 Nights)</label>
+                <input 
+                  type="text" 
+                  placeholder="e.g. 3 Days / 2 Nights" 
+                  value={newPackage.duration}
+                  onChange={(e) => setNewPackage({ ...newPackage, duration: e.target.value })}
+                  className="form-input text-xs" 
+                  required
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-slate-500 dark:text-slate-400">Price (Rs.)</label>
+                  <input 
+                    type="number" 
+                    placeholder="e.g. 8999" 
+                    value={newPackage.price}
+                    onChange={(e) => setNewPackage({ ...newPackage, price: e.target.value })}
+                    className="form-input text-xs" 
+                    required
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-slate-500 dark:text-slate-400">Vehicle Category</label>
+                  <select 
+                    value={newPackage.vehicleCategory}
+                    onChange={(e) => setNewPackage({ ...newPackage, vehicleCategory: e.target.value })}
+                    className="form-input text-xs"
+                  >
+                    <option value="Sedan">Sedan</option>
+                    <option value="Hatchback">Hatchback</option>
+                    <option value="SUV">SUV</option>
+                    <option value="Innova Crysta">Innova Crysta</option>
+                    <option value="Tempo Traveller">Tempo Traveller</option>
+                    <option value="Luxury Vehicles">Luxury Vehicle</option>
+                  </select>
+                </div>
+              </div>
+              
+              <div className="flex items-center space-x-2 py-1">
+                <input 
+                  type="checkbox" 
+                  id="accommodation"
+                  checked={newPackage.accommodation}
+                  onChange={(e) => setNewPackage({ ...newPackage, accommodation: e.target.checked })}
+                  className="w-4 h-4 rounded text-emeraldGreen focus:ring-emeraldGreen border-slate-300 dark:border-slate-700" 
+                />
+                <label htmlFor="accommodation" className="text-xs font-bold text-slate-600 dark:text-slate-300 cursor-pointer">
+                  Accommodation Included
+                </label>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-slate-500 dark:text-slate-400">Places Covered (comma-separated)</label>
+                <input 
+                  type="text" 
+                  placeholder="Spot 1, Spot 2, Spot 3" 
+                  value={newPackage.placesCovered}
+                  onChange={(e) => setNewPackage({ ...newPackage, placesCovered: e.target.value })}
+                  className="form-input text-xs" 
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-slate-500 dark:text-slate-400">Highlights (comma-separated)</label>
+                <input 
+                  type="text" 
+                  placeholder="Highlight 1, Highlight 2" 
+                  value={newPackage.highlights}
+                  onChange={(e) => setNewPackage({ ...newPackage, highlights: e.target.value })}
+                  className="form-input text-xs" 
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-slate-500 dark:text-slate-400">Package Photo</label>
+                <div className="flex flex-col space-y-2 mt-1">
+                  <input 
+                    type="file" 
+                    accept="image/*"
+                    onChange={(e) => {
+                      const file = e.target.files[0];
+                      if (file) {
+                        const reader = new FileReader();
+                        reader.onloadend = () => {
+                          setNewPackage({ ...newPackage, image: reader.result });
+                        };
+                        reader.readAsDataURL(file);
+                      }
+                    }}
+                    className="block w-full text-xs text-slate-500
+                      file:mr-4 file:py-2 file:px-4
+                      file:rounded-full file:border-0
+                      file:text-xs file:font-semibold
+                      file:bg-emeraldGreen/10 file:text-emeraldGreen
+                      hover:file:bg-emeraldGreen/20 cursor-pointer"
+                  />
+                  {newPackage.image && (
+                    <div className="relative mt-2 h-28 w-full rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700">
+                      <img src={newPackage.image} alt="Preview" className="w-full h-full object-cover" />
+                      <button
+                        type="button"
+                        onClick={() => setNewPackage({ ...newPackage, image: '' })}
+                        className="absolute top-1.5 right-1.5 p-1.5 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors shadow-sm"
+                        title="Remove Photo"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-slate-500 dark:text-slate-400">Description</label>
+                <textarea 
+                  placeholder="Describe the package itinerary and experience..." 
+                  value={newPackage.description}
+                  onChange={(e) => setNewPackage({ ...newPackage, description: e.target.value })}
+                  className="form-input text-xs h-20 resize-none" 
+                  required
+                />
+              </div>
+              
+              <div className="flex space-x-3 pt-2">
+                <button type="button" onClick={() => setShowPackageModal(false)} className="w-1/2 btn-secondary py-2 text-xs">Cancel</button>
+                <button type="submit" className="w-1/2 btn-primary py-2 text-xs">Save Package</button>
               </div>
             </form>
           </div>
