@@ -104,6 +104,19 @@ export default function AdminDashboard() {
   });
   // Driver assignment selection
   const [selectedDriver, setSelectedDriver] = useState('');
+  const [notification, setNotification] = useState({ message: '', type: 'success' });
+
+  const showNotification = (message, type = 'success') => {
+    setNotification({ message, type });
+    setTimeout(() => setNotification({ message: '', type: 'success' }), 4000);
+  };
+
+  const showUploadNotification = (entity, connected) => {
+    const message = connected
+      ? `${entity} uploaded successfully to the database.`
+      : `${entity} saved locally because the database is currently unavailable.`;
+    showNotification(message, connected ? 'success' : 'warning');
+  };
 
   const createDestinationFormState = (dest = null) => ({
     name: dest?.name || '',
@@ -190,10 +203,12 @@ export default function AdminDashboard() {
       setDestinations(destRes.data.data || []);
       setPackages(pkgRes.data.data && pkgRes.data.data.length > 0 ? pkgRes.data.data : fallbackPkgs);
       setDbConnected(dbRes.data.isConnected || false);
+      return dbRes.data.isConnected || false;
 
     } catch (error) {
       console.error('Error fetching admin data, loading client placeholders', error);
       setPackages(fallbackPkgs);
+      return false;
     } finally {
       setLoading(false);
     }
@@ -322,7 +337,8 @@ export default function AdminDashboard() {
 
       setShowDriverModal(false);
       setNewDriver({ name: '', email: '', password: 'driver123', phone: '', licenseNumber: '', vehicleAssigned: '' });
-      fetchAllData();
+      const isConnected = await fetchAllData();
+      showUploadNotification('Driver', isConnected);
     } catch (error) {
       console.error('Error registering driver', error);
       setDrivers([...drivers, { _id: 'mock_d_' + Date.now(), ...newDriver, role: 'Driver', status: 'Available' }]);
@@ -351,7 +367,8 @@ export default function AdminDashboard() {
       }
       setShowVehicleModal(false);
       setNewVehicle({ name: '', category: 'Sedan', seatingCapacity: 4, luggageCapacity: 2, pricePerKm: 14, plateNumber: '', acType: 'AC', image: '' });
-      fetchAllData();
+      const isConnected = await fetchAllData();
+      showUploadNotification('Cab', isConnected);
     } catch (error) {
       console.error('Error adding vehicle', error);
       setVehicles([...vehicles, { _id: 'mock_v_' + Date.now(), ...newVehicle, status: 'Available' }]);
@@ -394,7 +411,8 @@ export default function AdminDashboard() {
         vehicleCategory: 'Sedan',
         estimatedFare: 1500
       });
-      fetchAllData();
+      const isConnected = await fetchAllData();
+      showUploadNotification('Booking', isConnected);
     } catch (error) {
       console.error('Error adding booking', error);
       setBookings([...bookings, {
@@ -432,7 +450,8 @@ export default function AdminDashboard() {
         source: 'Walk-in',
         message: ''
       });
-      fetchAllData();
+      const isConnected = await fetchAllData();
+      showUploadNotification('Lead', isConnected);
     } catch (error) {
       console.error('Error adding lead', error);
       setEnquiries([...enquiries, {
@@ -474,7 +493,8 @@ export default function AdminDashboard() {
       }
 
       resetDestinationForm();
-      fetchAllData();
+      const isConnected = await fetchAllData();
+      showUploadNotification('Destination', isConnected);
     } catch (error) {
       console.error('Error saving destination', error);
       if (editingDestination) {
@@ -538,7 +558,8 @@ export default function AdminDashboard() {
       }
 
       resetPackageForm();
-      fetchAllData();
+      const isConnected = await fetchAllData();
+      showUploadNotification('Package', isConnected);
     } catch (error) {
       console.error('Error saving package', error);
       if (editingPackage) {
@@ -656,6 +677,14 @@ export default function AdminDashboard() {
           </button>
         </div>
       </div>
+
+      {notification.message && (
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-4">
+          <div className={`rounded-2xl border p-4 text-sm font-medium ${notification.type === 'success' ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-amber-300 bg-amber-50 text-amber-700'}`}>
+            {notification.message}
+          </div>
+        </div>
+      )}
 
       {/* Tabs list bar */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-10">
