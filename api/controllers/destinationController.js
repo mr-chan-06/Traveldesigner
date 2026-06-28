@@ -23,7 +23,21 @@ const getDestinationById = async (req, res) => {
 
 const createDestination = async (req, res) => {
   try {
-    const destination = await dataService.destinations.create(req.body);
+    const payload = {
+      name: req.body.name,
+      state: req.body.state,
+      image: req.body.image,
+      description: req.body.description,
+      distance: req.body.distance || '150 km',
+      estimatedFare: Number(req.body.estimatedFare || 0),
+      popularSpots: Array.isArray(req.body.popularSpots)
+        ? req.body.popularSpots
+        : typeof req.body.popularSpots === 'string'
+          ? req.body.popularSpots.split(',').map((spot) => spot.trim()).filter(Boolean)
+          : []
+    };
+
+    const destination = await dataService.destinations.create(payload);
     res.status(201).json({ success: true, data: destination });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -32,7 +46,21 @@ const createDestination = async (req, res) => {
 
 const updateDestination = async (req, res) => {
   try {
-    const destination = await dataService.destinations.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    const payload = {
+      name: req.body.name,
+      state: req.body.state,
+      image: req.body.image,
+      description: req.body.description,
+      distance: req.body.distance,
+      estimatedFare: req.body.estimatedFare !== undefined ? Number(req.body.estimatedFare) : undefined,
+      popularSpots: Array.isArray(req.body.popularSpots)
+        ? req.body.popularSpots
+        : typeof req.body.popularSpots === 'string'
+          ? req.body.popularSpots.split(',').map((spot) => spot.trim()).filter(Boolean)
+          : req.body.popularSpots
+    };
+
+    const destination = await dataService.destinations.findByIdAndUpdate(req.params.id, payload);
     res.status(200).json({ success: true, data: destination });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
