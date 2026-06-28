@@ -32,7 +32,7 @@ const createVehicle = async (req, res) => {
 
 const updateVehicle = async (req, res) => {
   try {
-    const vehicle = await dataService.vehicles.findByIdAndUpdate(req.params.id, req.body);
+    const vehicle = await dataService.vehicles.findByIdAndUpdate(req.params.id, req.body, { new: true });
     res.status(200).json({ success: true, data: vehicle });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });

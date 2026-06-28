@@ -3,7 +3,7 @@ import { useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { 
   BarChart3, Users, Car, MapPin, Compass, PhoneCall, 
-  Settings, CheckCircle, Clock, Ban, DollarSign, Plus, FileText, UserPlus, Trash2
+  Settings, CheckCircle, Clock, Ban, DollarSign, Plus, FileText, UserPlus, Trash2, Pencil
 } from 'lucide-react';
 import axios from 'axios';
 
@@ -51,6 +51,8 @@ export default function AdminDashboard() {
   const [showLeadModal, setShowLeadModal] = useState(false);
   const [showDestModal, setShowDestModal] = useState(false);
   const [showPackageModal, setShowPackageModal] = useState(false);
+  const [editingDestination, setEditingDestination] = useState(null);
+  const [editingPackage, setEditingPackage] = useState(null);
   const [assignModal, setAssignModal] = useState({ open: false, bookingId: null });
 
   // Fields for Add Driver
@@ -102,6 +104,53 @@ export default function AdminDashboard() {
   });
   // Driver assignment selection
   const [selectedDriver, setSelectedDriver] = useState('');
+
+  const createDestinationFormState = (dest = null) => ({
+    name: dest?.name || '',
+    state: dest?.state || 'Tamil Nadu',
+    image: dest?.image || '',
+    description: dest?.description || '',
+    distance: dest?.distance || '',
+    estimatedFare: dest?.estimatedFare || '',
+    popularSpots: dest?.popularSpots ? dest.popularSpots.join(', ') : ''
+  });
+
+  const createPackageFormState = (pkg = null) => ({
+    name: pkg?.name || '',
+    category: pkg?.category || 'Ooty Package',
+    duration: pkg?.duration || '3 Days / 2 Nights',
+    placesCovered: pkg?.placesCovered ? pkg.placesCovered.join(', ') : '',
+    vehicleCategory: pkg?.vehicleCategory || 'Sedan',
+    accommodation: pkg?.accommodation ?? true,
+    price: pkg?.price || '',
+    description: pkg?.description || '',
+    highlights: pkg?.highlights ? pkg.highlights.join(', ') : '',
+    image: pkg?.image || ''
+  });
+
+  const resetDestinationForm = () => {
+    setNewDest(createDestinationFormState());
+    setEditingDestination(null);
+    setShowDestModal(false);
+  };
+
+  const openDestinationModal = (dest = null) => {
+    setEditingDestination(dest);
+    setNewDest(createDestinationFormState(dest));
+    setShowDestModal(true);
+  };
+
+  const resetPackageForm = () => {
+    setNewPackage(createPackageFormState());
+    setEditingPackage(null);
+    setShowPackageModal(false);
+  };
+
+  const openPackageModal = (pkg = null) => {
+    setEditingPackage(pkg);
+    setNewPackage(createPackageFormState(pkg));
+    setShowPackageModal(true);
+  };
 
   // Protect Admin Access
   useEffect(() => {
@@ -377,7 +426,7 @@ export default function AdminDashboard() {
     }
   };
 
-  const handleAddDest = async (e) => {
+  const handleSaveDest = async (e) => {
     e.preventDefault();
     try {
       const token = localStorage.getItem('ooty_token');
@@ -393,31 +442,35 @@ export default function AdminDashboard() {
         popularSpots: newDest.popularSpots ? newDest.popularSpots.split(',').map(s => s.trim()) : []
       };
 
-      await axios.post('/api/destinations', payload, config);
-      setShowDestModal(false);
-      setNewDest({
-        name: '',
-        state: 'Tamil Nadu',
-        image: '',
-        description: '',
-        distance: '',
-        estimatedFare: '',
-        popularSpots: ''
-      });
+      if (editingDestination) {
+        const { data } = await axios.put(`/api/destinations/${editingDestination._id}`, payload, config);
+        const updatedDestination = data?.data || { ...editingDestination, ...payload };
+        setDestinations(destinations.map(dest => dest._id === editingDestination._id ? updatedDestination : dest));
+      } else {
+        const { data } = await axios.post('/api/destinations', payload, config);
+        const createdDestination = data?.data || { _id: 'mock_ds_' + Date.now(), ...payload };
+        setDestinations([...destinations, createdDestination]);
+      }
+
+      resetDestinationForm();
       fetchAllData();
     } catch (error) {
-      console.error('Error adding destination', error);
-      setDestinations([...destinations, {
-        _id: 'mock_ds_' + Date.now(),
-        name: newDest.name,
-        state: newDest.state,
-        image: newDest.image || 'https://images.unsplash.com/photo-1593693397690-362cb9666fc2?auto=format&fit=crop&q=80&w=600',
-        description: newDest.description,
-        distance: newDest.distance || '150 km',
-        estimatedFare: Number(newDest.estimatedFare || 0),
-        popularSpots: newDest.popularSpots ? newDest.popularSpots.split(',').map(s => s.trim()) : []
-      }]);
-      setShowDestModal(false);
+      console.error('Error saving destination', error);
+      if (editingDestination) {
+        setDestinations(destinations.map(dest => dest._id === editingDestination._id ? { ...dest, ...newDest, estimatedFare: Number(newDest.estimatedFare || 0), popularSpots: newDest.popularSpots ? newDest.popularSpots.split(',').map(s => s.trim()) : [] } : dest));
+      } else {
+        setDestinations([...destinations, {
+          _id: 'mock_ds_' + Date.now(),
+          name: newDest.name,
+          state: newDest.state,
+          image: newDest.image || 'https://images.unsplash.com/photo-1593693397690-362cb9666fc2?auto=format&fit=crop&q=80&w=600',
+          description: newDest.description,
+          distance: newDest.distance || '150 km',
+          estimatedFare: Number(newDest.estimatedFare || 0),
+          popularSpots: newDest.popularSpots ? newDest.popularSpots.split(',').map(s => s.trim()) : []
+        }]);
+      }
+      resetDestinationForm();
     }
   };
 
@@ -434,56 +487,57 @@ export default function AdminDashboard() {
     }
   };
 
-  const handleAddPackage = async (e) => {
+  const handleSavePackage = async (e) => {
     e.preventDefault();
+    const payload = {
+      name: newPackage.name,
+      category: newPackage.category,
+      duration: newPackage.duration,
+      placesCovered: newPackage.placesCovered ? newPackage.placesCovered.split(',').map(s => s.trim()) : [],
+      vehicleCategory: newPackage.vehicleCategory,
+      accommodation: newPackage.accommodation,
+      price: Number(newPackage.price || 0),
+      description: newPackage.description,
+      highlights: newPackage.highlights ? newPackage.highlights.split(',').map(s => s.trim()) : [],
+      image: newPackage.image || 'https://images.unsplash.com/photo-1590050752117-238cb0612b1b?auto=format&fit=crop&q=80&w=600'
+    };
+
     try {
       const token = localStorage.getItem('ooty_token');
       const config = { headers: { Authorization: `Bearer ${token}` } };
 
-      const payload = {
-        name: newPackage.name,
-        category: newPackage.category,
-        duration: newPackage.duration,
-        placesCovered: newPackage.placesCovered ? newPackage.placesCovered.split(',').map(s => s.trim()) : [],
-        vehicleCategory: newPackage.vehicleCategory,
-        accommodation: newPackage.accommodation,
-        price: Number(newPackage.price || 0),
-        description: newPackage.description,
-        highlights: newPackage.highlights ? newPackage.highlights.split(',').map(s => s.trim()) : [],
-        image: newPackage.image || 'https://images.unsplash.com/photo-1590050752117-238cb0612b1b?auto=format&fit=crop&q=80&w=600'
-      };
+      if (editingPackage) {
+        const { data } = await axios.put(`/api/packages/${editingPackage._id}`, payload, config);
+        const updatedPackage = data?.data || { ...editingPackage, ...payload };
+        setPackages(packages.map(pkg => pkg._id === editingPackage._id ? updatedPackage : pkg));
+      } else {
+        const { data } = await axios.post('/api/packages', payload, config);
+        const createdPackage = data?.data || { _id: 'mock_pkg_' + Date.now(), ...payload };
+        setPackages([...packages, createdPackage]);
+      }
 
-      await axios.post('/api/packages', payload, config);
-      setShowPackageModal(false);
-      setNewPackage({
-        name: '',
-        category: 'Ooty Package',
-        duration: '3 Days / 2 Nights',
-        placesCovered: '',
-        vehicleCategory: 'Sedan',
-        accommodation: true,
-        price: '',
-        description: '',
-        highlights: '',
-        image: ''
-      });
+      resetPackageForm();
       fetchAllData();
     } catch (error) {
-      console.error('Error adding package', error);
-      setPackages([...packages, {
-        _id: 'mock_pkg_' + Date.now(),
-        name: newPackage.name,
-        category: newPackage.category,
-        duration: newPackage.duration,
-        placesCovered: newPackage.placesCovered ? newPackage.placesCovered.split(',').map(s => s.trim()) : [],
-        vehicleCategory: newPackage.vehicleCategory,
-        accommodation: newPackage.accommodation,
-        price: Number(newPackage.price || 0),
-        description: newPackage.description,
-        highlights: newPackage.highlights ? newPackage.highlights.split(',').map(s => s.trim()) : [],
-        image: newPackage.image || 'https://images.unsplash.com/photo-1590050752117-238cb0612b1b?auto=format&fit=crop&q=80&w=600'
-      }]);
-      setShowPackageModal(false);
+      console.error('Error saving package', error);
+      if (editingPackage) {
+        setPackages(packages.map(pkg => pkg._id === editingPackage._id ? { ...pkg, ...payload, price: Number(newPackage.price || 0) } : pkg));
+      } else {
+        setPackages([...packages, {
+          _id: 'mock_pkg_' + Date.now(),
+          name: newPackage.name,
+          category: newPackage.category,
+          duration: newPackage.duration,
+          placesCovered: newPackage.placesCovered ? newPackage.placesCovered.split(',').map(s => s.trim()) : [],
+          vehicleCategory: newPackage.vehicleCategory,
+          accommodation: newPackage.accommodation,
+          price: Number(newPackage.price || 0),
+          description: newPackage.description,
+          highlights: newPackage.highlights ? newPackage.highlights.split(',').map(s => s.trim()) : [],
+          image: newPackage.image || 'https://images.unsplash.com/photo-1590050752117-238cb0612b1b?auto=format&fit=crop&q=80&w=600'
+        }]);
+      }
+      resetPackageForm();
     }
   };
 
@@ -964,13 +1018,22 @@ export default function AdminDashboard() {
                       <div>
                         <div className="relative">
                           <img src={dest.image || 'https://images.unsplash.com/photo-1593693397690-362cb9666fc2?auto=format&fit=crop&q=80&w=400'} alt={dest.name} className="h-40 w-full object-cover" />
-                          <button
-                            onClick={() => handleDeleteDest(dest._id)}
-                            className="absolute top-2 right-2 p-1.5 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm rounded-full text-slate-600 dark:text-slate-300 hover:text-red-500 transition-colors shadow-sm"
-                            title="Delete Destination"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
+                          <div className="absolute top-2 right-2 flex space-x-2">
+                            <button
+                              onClick={() => openDestinationModal(dest)}
+                              className="p-1.5 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm rounded-full text-slate-600 dark:text-slate-300 hover:text-emeraldGreen transition-colors shadow-sm"
+                              title="Edit Destination"
+                            >
+                              <Pencil className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteDest(dest._id)}
+                              className="p-1.5 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm rounded-full text-slate-600 dark:text-slate-300 hover:text-red-500 transition-colors shadow-sm"
+                              title="Delete Destination"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
                         </div>
                         <div className="p-5 space-y-3">
                           <div className="flex justify-between items-center">
@@ -1001,7 +1064,7 @@ export default function AdminDashboard() {
                 <div className="flex justify-between items-center bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm">
                   <h3 className="font-bold text-slate-850 dark:text-slate-100 text-lg">Tour Packages Options</h3>
                   <button 
-                    onClick={() => setShowPackageModal(true)}
+                    onClick={() => openPackageModal()}
                     className="px-3 py-1.5 bg-emeraldGreen text-white font-bold rounded-lg hover:bg-emerald-600 text-xs flex items-center space-x-1.5 shadow"
                   >
                     <Plus className="w-4 h-4" />
@@ -1014,13 +1077,22 @@ export default function AdminDashboard() {
                       <div>
                         <div className="relative">
                           <img src={pkg.image || 'https://images.unsplash.com/photo-1590050752117-238cb0612b1b?auto=format&fit=crop&q=80&w=400'} alt={pkg.name} className="h-40 w-full object-cover" />
-                          <button
-                            onClick={() => handleDeletePackage(pkg._id)}
-                            className="absolute top-2 right-2 p-1.5 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm rounded-full text-slate-600 dark:text-slate-300 hover:text-red-500 transition-colors shadow-sm"
-                            title="Delete Package"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
+                          <div className="absolute top-2 right-2 flex space-x-2">
+                            <button
+                              onClick={() => openPackageModal(pkg)}
+                              className="p-1.5 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm rounded-full text-slate-600 dark:text-slate-300 hover:text-emeraldGreen transition-colors shadow-sm"
+                              title="Edit Package"
+                            >
+                              <Pencil className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => handleDeletePackage(pkg._id)}
+                              className="p-1.5 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm rounded-full text-slate-600 dark:text-slate-300 hover:text-red-500 transition-colors shadow-sm"
+                              title="Delete Package"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
                         </div>
                         <div className="p-5 space-y-3">
                           <div className="flex justify-between items-center">
@@ -1469,9 +1541,9 @@ export default function AdminDashboard() {
         <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
           <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 sm:p-8 w-full max-w-md shadow-2xl border border-slate-200 dark:border-slate-700 space-y-4 max-h-[90vh] overflow-y-auto">
             <h3 className="font-display font-extrabold text-2xl text-slate-900 dark:text-white border-l-4 border-emeraldGreen pl-3">
-              Add New Destination
+              {editingDestination ? 'Update Destination' : 'Add New Destination'}
             </h3>
-            <form onSubmit={handleAddDest} className="space-y-3.5">
+            <form onSubmit={handleSaveDest} className="space-y-3.5">
               <div className="space-y-1">
                 <label className="text-xs font-bold text-slate-500 dark:text-slate-400">Destination Name</label>
                 <input 
@@ -1577,8 +1649,8 @@ export default function AdminDashboard() {
               </div>
               
               <div className="flex space-x-3 pt-2">
-                <button type="button" onClick={() => setShowDestModal(false)} className="w-1/2 btn-secondary py-2 text-xs">Cancel</button>
-                <button type="submit" className="w-1/2 btn-primary py-2 text-xs">Save Destination</button>
+                <button type="button" onClick={resetDestinationForm} className="w-1/2 btn-secondary py-2 text-xs">Cancel</button>
+                <button type="submit" className="w-1/2 btn-primary py-2 text-xs">{editingDestination ? 'Update Destination' : 'Save Destination'}</button>
               </div>
             </form>
           </div>
@@ -1590,9 +1662,9 @@ export default function AdminDashboard() {
         <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
           <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 sm:p-8 w-full max-w-md shadow-2xl border border-slate-200 dark:border-slate-700 space-y-4 max-h-[90vh] overflow-y-auto">
             <h3 className="font-display font-extrabold text-2xl text-slate-900 dark:text-white border-l-4 border-emeraldGreen pl-3">
-              Add New Tour Package
+              {editingPackage ? 'Update Tour Package' : 'Add New Tour Package'}
             </h3>
-            <form onSubmit={handleAddPackage} className="space-y-3.5">
+            <form onSubmit={handleSavePackage} className="space-y-3.5">
               <div className="space-y-1">
                 <label className="text-xs font-bold text-slate-500 dark:text-slate-400">Package Name</label>
                 <input 
@@ -1743,8 +1815,8 @@ export default function AdminDashboard() {
               </div>
               
               <div className="flex space-x-3 pt-2">
-                <button type="button" onClick={() => setShowPackageModal(false)} className="w-1/2 btn-secondary py-2 text-xs">Cancel</button>
-                <button type="submit" className="w-1/2 btn-primary py-2 text-xs">Save Package</button>
+                <button type="button" onClick={resetPackageForm} className="w-1/2 btn-secondary py-2 text-xs">Cancel</button>
+                <button type="submit" className="w-1/2 btn-primary py-2 text-xs">{editingPackage ? 'Update Package' : 'Save Package'}</button>
               </div>
             </form>
           </div>

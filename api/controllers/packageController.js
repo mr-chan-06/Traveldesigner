@@ -32,7 +32,7 @@ const createPackage = async (req, res) => {
 
 const updatePackage = async (req, res) => {
   try {
-    const tourPackage = await dataService.packages.findByIdAndUpdate(req.params.id, req.body);
+    const tourPackage = await dataService.packages.findByIdAndUpdate(req.params.id, req.body, { new: true });
     res.status(200).json({ success: true, data: tourPackage });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });

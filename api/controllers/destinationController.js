@@ -32,7 +32,7 @@ const createDestination = async (req, res) => {
 
 const updateDestination = async (req, res) => {
   try {
-    const destination = await dataService.destinations.findByIdAndUpdate(req.params.id, req.body);
+    const destination = await dataService.destinations.findByIdAndUpdate(req.params.id, req.body, { new: true });
     res.status(200).json({ success: true, data: destination });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });

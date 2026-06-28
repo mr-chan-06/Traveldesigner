@@ -168,7 +168,7 @@ const updateBooking = async (req, res) => {
       driverAssigned: driverAssigned || booking.driverAssigned,
       vehicleAssigned: vehicleAssigned || booking.vehicleAssigned,
       paymentStatus: paymentStatus || booking.paymentStatus
-    });
+    }, { new: true });
 
     // Notify updates if driver assigned
     if (driverAssigned && driverAssigned !== booking.driverAssigned) {
@@ -189,7 +189,7 @@ const updateBooking = async (req, res) => {
 // Cancel booking
 const cancelBooking = async (req, res) => {
   try {
-    const booking = await dataService.bookings.findByIdAndUpdate(req.params.id, { status: 'Cancelled' });
+    const booking = await dataService.bookings.findByIdAndUpdate(req.params.id, { status: 'Cancelled' }, { new: true });
     res.status(200).json({ success: true, message: 'Booking cancelled successfully', data: booking });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });

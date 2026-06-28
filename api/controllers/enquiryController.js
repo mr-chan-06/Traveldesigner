@@ -31,7 +31,7 @@ const createEnquiry = async (req, res) => {
 
 const updateEnquiry = async (req, res) => {
   try {
-    const enquiry = await dataService.enquiries.findByIdAndUpdate(req.params.id, req.body);
+    const enquiry = await dataService.enquiries.findByIdAndUpdate(req.params.id, req.body, { new: true });
     res.status(200).json({ success: true, data: enquiry });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
